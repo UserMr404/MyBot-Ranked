@@ -738,6 +738,8 @@ Func GUIControl_WM_NOTIFY($hWind, $iMsg, $wParam, $lParam)
 			tabARMY()
 		Case $g_hGUI_SEARCH_TAB
 			tabSEARCH()
+		Case $g_hGUI_RANKED_TAB
+			tabRanked()
 		Case $g_hGUI_DEADBASE_TAB
 			tabDeadbase()
 		Case $g_hGUI_ACTIVEBASE_TAB
@@ -1788,16 +1790,24 @@ Func tabAttack()
 			GUISetState(@SW_HIDE, $g_hGUI_STRATEGIES)
 			GUISetState(@SW_SHOWNOACTIVATE, $g_hGUI_TRAINARMY)
 			GUISetState(@SW_HIDE, $g_hGUI_SEARCH)
+			GUISetState(@SW_HIDE, $g_hGUI_RANKED)
 			tabARMY()
 		Case $tabidx = 1 ; SEARCH tab
 			GUISetState(@SW_HIDE, $g_hGUI_STRATEGIES)
 			GUISetState(@SW_HIDE, $g_hGUI_TRAINARMY)
 			GUISetState(@SW_SHOWNOACTIVATE, $g_hGUI_SEARCH)
+			GUISetState(@SW_HIDE, $g_hGUI_RANKED)
 			tabSEARCH()
-		Case $tabidx = 2 ; NewSmartZap tab
+		Case $tabidx = 2 ; Strategies tab
 			GUISetState(@SW_SHOWNOACTIVATE, $g_hGUI_STRATEGIES)
 			GUISetState(@SW_HIDE, $g_hGUI_TRAINARMY)
 			GUISetState(@SW_HIDE, $g_hGUI_SEARCH)
+			GUISetState(@SW_HIDE, $g_hGUI_RANKED)
+		Case $tabidx = 3 ; Ranked Attack tab
+			GUISetState(@SW_HIDE, $g_hGUI_STRATEGIES)
+			GUISetState(@SW_HIDE, $g_hGUI_TRAINARMY)
+			GUISetState(@SW_HIDE, $g_hGUI_SEARCH)
+			GUISetState(@SW_SHOWNOACTIVATE, $g_hGUI_RANKED)
 	EndSelect
 EndFunc   ;==>tabAttack
 
@@ -1833,6 +1843,33 @@ Func tabARMY()
 	EndSelect
 
 EndFunc   ;==>tabARMY
+
+Func tabRanked()
+	If $g_iGuiMode <> 1 Then Return
+	Local $tabidx = GUICtrlRead($g_hGUI_RANKED_TAB)
+	Select
+		Case $tabidx = 0 ; Status tab
+			GUISetState(@SW_SHOWNOACTIVATE, $g_hGUI_RANKED_STATUS)
+			GUISetState(@SW_HIDE, $g_hGUI_RANKED_ARMY)
+			GUISetState(@SW_HIDE, $g_hGUI_RANKED_ATTACK)
+			GUISetState(@SW_HIDE, $g_hGUI_RANKED_OPTIONS)
+		Case $tabidx = 1 ; Train Army tab
+			GUISetState(@SW_HIDE, $g_hGUI_RANKED_STATUS)
+			GUISetState(@SW_SHOWNOACTIVATE, $g_hGUI_RANKED_ARMY)
+			GUISetState(@SW_HIDE, $g_hGUI_RANKED_ATTACK)
+			GUISetState(@SW_HIDE, $g_hGUI_RANKED_OPTIONS)
+		Case $tabidx = 2 ; Attack Settings tab
+			GUISetState(@SW_HIDE, $g_hGUI_RANKED_STATUS)
+			GUISetState(@SW_HIDE, $g_hGUI_RANKED_ARMY)
+			GUISetState(@SW_SHOWNOACTIVATE, $g_hGUI_RANKED_ATTACK)
+			GUISetState(@SW_HIDE, $g_hGUI_RANKED_OPTIONS)
+		Case $tabidx = 3 ; Options tab
+			GUISetState(@SW_HIDE, $g_hGUI_RANKED_STATUS)
+			GUISetState(@SW_HIDE, $g_hGUI_RANKED_ARMY)
+			GUISetState(@SW_HIDE, $g_hGUI_RANKED_ATTACK)
+			GUISetState(@SW_SHOWNOACTIVATE, $g_hGUI_RANKED_OPTIONS)
+	EndSelect
+EndFunc   ;==>tabRanked
 
 Func tabSEARCH()
 	If $g_iGuiMode <> 1 Then Return

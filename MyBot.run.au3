@@ -868,18 +868,25 @@ Func runBot() ;Bot that runs everything in order
 				If $g_bRestart = True Then ContinueLoop
 
 				If $g_iCommandStop <> 0 And $g_iCommandStop <> 3 Then
-					; ===== RANKED ATTACK SYSTEM =====
-					; Check if we should attempt a ranked attack
+					; ===== RANKED ATTACK SYSTEM WITH PRIORITIZATION =====
+					; Check if we should attempt a ranked attack first (priority)
 					Local $bAttemptRankedAttack = False
-					If $g_bRankedModeEnabled And $g_iRankedAttacksToday < $g_iMaxRankedAttacks Then
+					Local $bRankedAvailable = False
+					
+					If $g_bRankedModeEnabled And $g_iRankedAttacksRemaining > 0 Then
+						$bRankedAvailable = True
 						; Check if ranked army is ready
 						If CheckRankedArmyReady() Then
 							$bAttemptRankedAttack = True
-							SetLog("Attempting Ranked Attack (" & ($g_iRankedAttacksToday + 1) & "/8)", $COLOR_ACTION)
+							SetLog("Attempting Ranked Attack (" & (6 - $g_iRankedAttacksRemaining + 1) & "/6)", $COLOR_ACTION)
 						Else
 							SetLog("Ranked army not ready, training required", $COLOR_WARNING)
 							TrainRankedArmy()
-							ContinueLoop ; Skip to next loop iteration to continue training
+							; If we have ranked attacks available but army not ready, skip normal attacks
+							If $bRankedAvailable Then
+								SetLog("Prioritizing Ranked attacks - waiting for army", $COLOR_INFO)
+								ContinueLoop ; Skip to next loop iteration to continue training
+							EndIf
 						EndIf
 					EndIf
 					
@@ -887,15 +894,38 @@ Func runBot() ;Bot that runs everything in order
 						; Execute ranked attack (bypasses search)
 						If RankedAttack() Then
 							SetLog("Ranked attack completed successfully", $COLOR_SUCCESS)
+							$g_iRankedAttacksRemaining -= 1
+							$g_iRankedAttacksToday += 1
+							GUICtrlSetData($g_hTxtRankedAttacksRemaining, $g_iRankedAttacksRemaining)
+							
+							; Increment attack counter for consecutive attacks (shared with normal)
+							$g_aiAttackedCount += 1
+							
+							; Check consecutive attack limits (shared functionality)
+							If SmartPause() Then Return
+							
 							ContinueLoop ; Continue to next loop iteration
 						Else
-							SetLog("Ranked attack failed, continuing with normal attack", $COLOR_WARNING)
-							; Fall through to normal attack logic
+							SetLog("Ranked attack failed, will retry", $COLOR_WARNING)
+							ContinueLoop ; Don't fall through to normal attacks while ranked available
+						EndIf
+					ElseIf Not $bRankedAvailable Or $g_iRankedAttacksRemaining = 0 Then
+						; Only do normal attacks if no ranked attacks are available
+						If $g_bRankedModeEnabled And $g_iRankedAttacksRemaining = 0 Then
+							SetLog("All ranked attacks completed for today, continuing with normal attacks", $COLOR_INFO)
+						EndIf
+						
+						AttackMain()
+						
+						; Increment attack counter for consecutive attacks (shared with ranked)
+						If $g_bAttackActive Then
+							$g_aiAttackedCount += 1
+							
+							; Check consecutive attack limits (shared functionality)
+							If SmartPause() Then Return
 						EndIf
 					EndIf
 					; ===== END RANKED ATTACK SYSTEM =====
-					
-					AttackMain()
 					$g_bSkipFirstZoomout = False
 					If $g_bOutOfGold Then
 						SetLog("Switching to Halt Attack, Stay Online/Collect mode ...", $COLOR_ERROR)

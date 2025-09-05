@@ -620,11 +620,13 @@ Global Const $g_asModeText[4] = ["Dead Base", "Live Base", "TH Bully", "Drop Tro
 ; RANKED ATTACK SYSTEM VARIABLES
 ; ============================================================================================================
 ; Ranked Attack System Core Variables
-Global Const $g_iMaxRankedAttacks = 8 ; Daily limit for ranked attacks
+Global Const $g_iMaxRankedAttacks = 6 ; Daily limit for ranked attacks
 Global $g_iRankedAttacksToday = 0 ; Current count of ranked attacks today
+Global $g_iRankedAttacksRemaining = 6 ; Number of ranked attacks remaining
 Global $g_sLastRankedResetDate = "" ; Last date when ranked attacks were reset
 Global $g_sLastRankedResetTime = "" ; Last time when ranked attacks were reset (for 7 AM tracking)
 Global $g_bCurrentAttackIsRanked = False ; Flag to track if current attack is ranked
+Global $g_bAttackActive = False ; Flag to track if an attack occurred
 Global $g_bRankedModeEnabled = False ; Flag to enable/disable ranked mode entirely
 
 ; Ranked Attack Hero Settings
@@ -636,9 +638,21 @@ Global $g_bRankedUseChampion = True
 
 ; Ranked Attack Strategy Settings
 Global $g_iRankedAttackStrategy = 0 ; 0 = Standard, 1 = Scripted
+Global $g_iRankedAttackAlgorithm = 0 ; Attack algorithm (0=Standard, 1=Scripted, 2=SmartFarm)
 Global $g_sRankedCSVFile = "" ; CSV file path for scripted ranked attacks
 Global $g_bRankedAlwaysUseSiege = True
+Global $g_iRankedQuickTrainArmy = -1 ; Selected quick train army (-1 = none, 0-2 = army 1-3)
 Global $g_iRankedSiegeType = 0 ; Default siege machine type for ranked
+Global $g_bRankedDropCC = False ; Drop clan castle troops in ranked attack
+Global $g_iRankedSelectTroop = 0 ; Troop selection mode for ranked attacks
+
+; Ranked Spell Deployment Settings
+Global $g_bRankedUseLightSpell = False
+Global $g_bRankedUseHealSpell = False
+Global $g_bRankedUseRageSpell = False
+Global $g_bRankedUseJumpSpell = False
+Global $g_bRankedUseFreezeSpell = False
+Global $g_bRankedUsePoisonSpell = False
 
 ; Ranked Attack Behavior Settings
 Global $g_bRankedSkipSearch = True ; Always true - ranked mode never searches
@@ -650,6 +664,24 @@ Global $g_hBtnNormalAttack = 0, $g_hBtnRankedAttack = 0
 Global $g_hLblRankedAttacksLeft = 0, $g_hLblRankedResetTime = 0
 Global $g_hGrpRankedArmy = 0, $g_hGrpRankedSpells = 0, $g_hGrpRankedStrategy = 0
 Global $g_ahChkRankedHeroes[5] = [0, 0, 0, 0, 0] ; Checkboxes for heroes (King, Queen, Prince, Warden, Champion)
+
+; Additional Ranked GUI Variables
+Global $g_hTxtRankedTotalCountSpell = 0
+Global $g_ahPicRankedTrainArmyTroopTmp[7] = [0, 0, 0, 0, 0, 0, 0]
+Global $g_ahLblRankedTrainArmyTroopTmp[7] = [0, 0, 0, 0, 0, 0, 0]
+Global $g_ahPicRankedTrainArmySiegeTmp[3] = [0, 0, 0]
+Global $g_ahLblRankedTrainArmySiegeTmp[3] = [0, 0, 0]
+Global $g_ahPicRankedTrainArmySpellTmp[7] = [0, 0, 0, 0, 0, 0, 0]
+Global $g_ahLblRankedTrainArmySpellTmp[7] = [0, 0, 0, 0, 0, 0, 0]
+Global $g_iRankedSelectTroopMode = 0
+Global $g_iRankedSiegeMachine = 0
+Global $g_iRankedWardenMode = 2 ; 0=Ground, 1=Air, 2=Default
+Global $g_iRankedAttackType = 1 ; 0=All Out, 1=Smart Deploy, 2=Trophy Push
+Global $g_hCmbRankedAttackType = 0
+; Note: $g_ahChkRankedSpells and $g_abRankedUseSpells are declared after $eSpellCount enum
+Global $g_bRankedDoubleTrain = False
+Global $g_bRankedPreciseArmy = False
+Global $g_abRankedUseInGameArmy[3] = [True, True, True]
 
 ; Ranked Attack Statistics
 Global $g_iTotalRankedAttacksAllTime = 0 ; Total ranked attacks across all days
@@ -743,6 +775,10 @@ Global Const $g_aiSpellDonateXP[$eSpellCount] = [5, 10, 10, 10, 5, 15, 5, 10, 10
 Global Const $g_aiSpellsDonationCost[$eSpellCount] = [9, 18, 18, 18, 9, 27, 9, 18, 18, 135, 135, 135, 135, 135, 270]
 Global $CCSpellsPage = 0
 
+; Ranked spell arrays - declared here after $eSpellCount is defined
+Global $g_ahChkRankedSpells[$eSpellCount]
+Global $g_abRankedUseSpells[$eSpellCount]
+
 ; Siege Machines
 Global Enum $eSiegeWallWrecker, $eSiegeBattleBlimp, $eSiegeStoneSlammer, $eSiegeBarracks, $eSiegeLogLauncher, $eSiegeFlameFlinger, $eSiegeBattleDrill, $eSiegeTroopLauncher, $eSiegeMachineCount
 Global Const $g_aSiegesIcon[$eSiegeMachineCount] = [$eIcnWallW, $eIcnBattleB, $eIcnStoneS, $eIcnSiegeB, $eIcnLogL, $eIcnFlameF, $eIcnBattleD, $eIcnTroopL]
@@ -765,6 +801,7 @@ Global Const $g_aiSiegeMachineDonateXP[$eSiegeMachineCount] = [30, 30, 30, 30, 3
 ; Ranked Attack Arrays - Declared after enums
 Global $g_aiRankedArmyComp[$eTroopCount] ; Troop composition for ranked attacks  
 Global $g_aiRankedSpellComp[$eSpellCount] ; Spell composition for ranked attacks
+Global $g_aiRankedSiegeComp[$eSiegeMachineCount] ; Siege composition for ranked attacks
 Global $g_ahTxtRankedTroops[$eTroopCount] ; Input controls for ranked troop counts
 Global $g_ahTxtRankedSpells[$eSpellCount] ; Input controls for ranked spell counts
 

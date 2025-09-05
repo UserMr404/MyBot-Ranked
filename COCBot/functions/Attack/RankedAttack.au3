@@ -16,16 +16,16 @@
 Func RankedAttack()
 	SetLog("========== RANKED ATTACK MODE ==========", $COLOR_INFO)
 	
+	; Check for 7 AM reset first
+	CheckRankedDailyReset()
+	
 	; Check daily limit
-	If $g_iRankedAttacksToday >= $g_iMaxRankedAttacks Then
-		SetLog("Daily ranked attack limit reached (8/8)", $COLOR_WARNING)
+	If $g_iRankedAttacksRemaining <= 0 Then
+		SetLog("Daily ranked attack limit reached (0/6 remaining)", $COLOR_WARNING)
 		Return False
 	EndIf
 	
-	; Check for 7 AM reset
-	CheckRankedDailyReset()
-	
-	SetLog("Ranked Attack #" & ($g_iRankedAttacksToday + 1) & " of " & $g_iMaxRankedAttacks, $COLOR_INFO)
+	SetLog("Ranked Attack - " & $g_iRankedAttacksRemaining & " attacks remaining today", $COLOR_INFO)
 	
 	; Prepare for attack (no search in ranked mode)
 	Local $bReadyForAttack = False
@@ -298,11 +298,12 @@ Func CheckRankedDailyReset()
 	If $iCurrentHour >= $g_iRankedResetHour And $g_sLastRankedResetDate <> $sCurrentDate Then
 		; Reset daily counter
 		$g_iRankedAttacksToday = 0
+		$g_iRankedAttacksRemaining = 6  ; Reset to 6 attacks
 		$g_sLastRankedResetDate = $sCurrentDate
 		$g_sLastRankedResetTime = @HOUR & ":" & @MIN
 		
 		; Clear today's results
-		For $i = 0 To 7
+		For $i = 0 To 5  ; Changed to 6 attacks max
 			$g_aiRankedAttackResults[$i] = ""
 		Next
 		
@@ -310,7 +311,9 @@ Func CheckRankedDailyReset()
 		SaveRankedConfig()
 		
 		; Update GUI
-		GUICtrlSetData($g_hLblRankedAttacksLeft, $g_iMaxRankedAttacks)
+		If $g_hTxtRankedAttacksRemaining <> 0 Then
+			GUICtrlSetData($g_hTxtRankedAttacksRemaining, $g_iRankedAttacksRemaining)
+		EndIf
 		UpdateTimeToResetDisplay()
 	EndIf
 EndFunc   ;==>CheckRankedDailyReset
